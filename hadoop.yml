@@ -1,0 +1,78 @@
+- hosts: namenode
+  tasks:  
+  - name: creating directory of namenode
+    file: 
+        path: "/namenode"
+        state: directory
+  - name: configure hdfs file
+    blockinfile:
+        path: "/etc/hadoop/hdfs-site.xml"
+        insertafter: "<configuration>"
+        content: |
+               <property>
+               <name>dfs.name.dir</name>
+               <value>/namenode</value>
+               </property> 
+  - name: configure core file
+    blockinfile:
+        path: "/etc/hadoop/core-site.xml"
+        insertafter: "<configuration>"
+        content: |
+               <property>
+               <name>fs.default.name</name>
+               <value>hdfs://0.0.0.0:9001</value>
+               </property>
+  - name: format the directory
+    command: "echo Y | hadoop namenode -format -force"
+    ignore_errors: yes
+    register: k
+  - service:
+        name: "firewalld"
+        state: stopped
+  - debug: 
+        var: k
+  - name: starting namenode
+    command: "hadoop-daemon.sh start namenode"
+    when: k.failed == false
+    register: z
+  - debug:
+       var: z
+  - name: check hadoop status
+    command: "jps"
+
+
+- hosts: datanode
+  tasks:
+  - name: creating directory of datanode
+    file:
+        path: "/datanode"
+        state: directory
+  - name: configure hdfs file
+    blockinfile:
+        path: "/etc/hadoop/hdfs-site.xml"
+        insertafter: "<configuration>"
+        content: |
+               <property>
+               <name>dfs.data.dir</name>
+               <value>/datanode</value>
+               </property>
+  - name: configure core file
+    blockinfile:
+        path: "/etc/hadoop/core-site.xml"
+        insertafter: "<configuration>"
+        content: |
+               <property>
+               <name>fs.default.name</name>
+               <value>hdfs://192.168.1.7:9001</value>
+               </property>
+  - service:
+        name: "firewalld"
+        state: stopped
+  - name: starting datanode
+    command: "hadoop-daemon.sh start datanode"
+    register: u
+  - debug:
+       var: u
+  - name: check hadoop status
+    command: "jps"
+
